@@ -1,7 +1,3 @@
-# TermChat TUI Walkthrough
-
-I have migrated the TermChat client to use **Textual**, a modern TUI framework.
-
 ## How to Run
 
 1.  Ensure you have the dependencies installed:
