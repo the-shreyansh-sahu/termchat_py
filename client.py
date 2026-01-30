@@ -40,8 +40,8 @@ class LoginScreen(Screen):
     def compose(self) -> ComposeResult:
         with Vertical(id="login-container"):
             yield Label("TermChat Login", id="login-label")
-            yield Input(placeholder="Username", id="username")
-            yield Input(placeholder="Password", password=True, id="password")
+            yield Input(placeholder="Username (Max 50 Characters)", id="username", max_length=50)
+            yield Input(placeholder="Password (Max 20 Characters)", password=True, id="password", max_length=20)
             with Horizontal(id="btn-container"):
                 yield Button("Login", id="login", variant="primary")
                 yield Button("Register", id="register", variant="warning")
@@ -52,7 +52,6 @@ class LoginScreen(Screen):
         self.query_one("#status", Label).update("Checking...")
         if db.check_user(username, password):
             self.app.user = username
-            # push_screen must be called from the main thread
             self.app.call_from_thread(self.app.push_screen, ReceiverScreen())
         else:
             self.query_one("#status", Label).update("Invalid Credentials")
@@ -90,14 +89,28 @@ class ReceiverScreen(Screen):
         border: solid blue;
         padding: 1 2;
     }
+    #recv-label {
+        width: 100%;
+        text-align: center;
+    }
+    #recv-btns {
+        align: center middle;
+        margin-top: 1;
+        height: auto;
+        width: 100%;
+    }
+    #recv-btns Button {
+        margin: 0 1; 
+    }
     """
     
     def compose(self) -> ComposeResult:
         with Vertical(id="recv-container"):
-            yield Label("Who do you want to chat with?")
+            yield Label("Who do you want to chat with?", id="recv-label")
             yield Input(placeholder="Enter username", id="receiver")
-            yield Button("Start Chat", id="start", variant="success")
-            yield Button("Logout", id="logout", variant="error")
+            with Horizontal(id="recv-btns"):
+                yield Button("Start Chat", id="start", variant="success")
+                yield Button("Logout", id="logout", variant="error")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "start":
@@ -158,9 +171,7 @@ class ChatScreen(Screen):
         for msg in msgs:
             # msg structure: (id, sender, receiver, message, timestamp)
             msg_id, sender, _, content, _ = msg
-            
-            # Debug: print to console (user won't see this in TUI easily but we can infer)
-            # Actually, let's use notify for debug if it happens
+
             if msg_id <= self.last_msg_id:
                 continue
                 
@@ -174,9 +185,6 @@ class ChatScreen(Screen):
     @work(exclusive=True, thread=True)
     def send_message(self, text):
         db.save_message(self.app.user, self.receiver, text)
-        # We don't manually add it here; polling will pick it up, 
-        # or we could optimistically add it. Polling is safer for consistency.
-        # But for better UX, let's trigger a poll immediately after send
         self.poll_messages()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
